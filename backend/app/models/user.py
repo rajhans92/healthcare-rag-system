@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import String, Text, DateTime
+from sqlalchemy import String, Text, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseEntity
@@ -35,6 +35,16 @@ class User(Base, BaseEntity):
         nullable=False,
     )
 
+    first_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    last_name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
     role: Mapped[UserRole] = mapped_column(
         SqlEnum(UserRole),
         nullable=False,
@@ -44,6 +54,12 @@ class User(Base, BaseEntity):
         SqlEnum(UserStatus),
         default=UserStatus.ACTIVE,
         nullable=False,
+    )
+
+    is_email_verified = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
     )
 
     last_login_at: Mapped[datetime | None] = mapped_column(
