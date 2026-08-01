@@ -1,1 +1,2 @@
 sqlalchemy
+pydantic_settings
