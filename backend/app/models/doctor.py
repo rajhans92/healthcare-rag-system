@@ -18,16 +18,6 @@ class Doctor(Base, BaseEntity):
         index=True,
     )
 
-    first_name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
-    )
-
-    last_name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
-    )
-
     license_number: Mapped[str] = mapped_column(
         String(100),
         unique=True,
