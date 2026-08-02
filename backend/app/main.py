@@ -22,7 +22,9 @@ async def lifespan(app: FastAPI):
     """
     Application startup and shutdown events.
     """
+    await check_database()
 
+    await initialize_database()
     # Startup
     print(f"Starting {settings.APP_NAME}...")
 

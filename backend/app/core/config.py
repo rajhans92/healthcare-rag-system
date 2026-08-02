@@ -89,10 +89,13 @@ class Settings(BaseSettings):
 
     DB_POOL_RECYCLE: int = 1800
 
+    AUTO_CREATE_TABLES: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
     )
+
 
 @lru_cache
 def get_settings() -> Settings:
