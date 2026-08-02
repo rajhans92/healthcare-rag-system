@@ -16,6 +16,12 @@ from app.db.database import get_db
 from app.models.user import User, UserRole, UserStatus
 from app.repositories.user_repository import UserRepository
 
+
+from app.services.auth_service import AuthService
+from app.services.patient_service import PatientService
+from app.services.doctor_service import DoctorService
+
+
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login"
 )
@@ -61,3 +67,29 @@ async def get_current_user(
         )
 
     return user
+
+def get_auth_service(
+    db: AsyncSession = Depends(get_db),
+) -> AuthService:
+    """
+    Returns AuthService instance.
+    """
+    return AuthService(db)
+
+
+def get_patient_service(
+    db: AsyncSession = Depends(get_db),
+) -> PatientService:
+    """
+    Returns PatientService instance.
+    """
+    return PatientService(db)
+
+def get_doctor_service(
+    db: AsyncSession = Depends(get_db),
+) -> DoctorService:
+    """
+    Returns DoctorService instance.
+    """
+
+    return DoctorService(db)

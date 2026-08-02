@@ -22,3 +22,5 @@ structlog
 pytest
 pytest-asyncio
 httpx
+
+greenlet==3.2.4
