@@ -58,16 +58,30 @@ async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError,
 ):
-    """
-    Handle request validation errors.
-    """
+
+    errors = []
+
+    for error in exc.errors():
+
+        field = ".".join(
+            str(item)
+            for item in error["loc"]
+            if item != "body"
+        )
+
+        errors.append(
+            {
+                "field": field,
+                "message": error["msg"],
+            }
+        )
 
     return build_error_response(
         request=request,
         status_code=422,
         error_code="VALIDATION_ERROR",
         message="Validation failed.",
-        details=exc.errors(),
+        details=errors,
     )
 
 async def http_exception_handler(

@@ -16,14 +16,15 @@ from app.middleware.request_id import RequestIdMiddleware
 from app.middleware.logging import LoggingMiddleware
 from app.core.logging import configure_logging
 from app.middleware.timing import TimingMiddleware
+from app.db.initializer import initialize_database
+from app.api.patient import router as patient_router
+from app.api.doctor import router as doctor_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Application startup and shutdown events.
     """
-    await check_database()
-
     await initialize_database()
     # Startup
     print(f"Starting {settings.APP_NAME}...")
@@ -96,5 +97,15 @@ async def health():
 
 app.include_router(
     auth_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    patient_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    doctor_router,
     prefix=settings.API_V1_PREFIX,
 )
