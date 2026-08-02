@@ -14,9 +14,9 @@ from app.core.password import (
     hash_password,
     verify_password,
 )
-from app.models.patient import Patient
+# from app.models.patient import Patient
 from app.models.user import User
-from app.repositories.patient_repository import PatientRepository
+# from app.repositories.patient_repository import PatientRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
     LoginRequest,
