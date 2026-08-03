@@ -49,15 +49,15 @@ class Doctor(Base, BaseEntity):
         back_populates="doctor",
     )
 
-    encounters = relationship(
-        "Encounter",
-        back_populates="doctor",
-    )
+    # encounters = relationship(
+    #     "Encounter",
+    #     back_populates="doctor",
+    # )
 
-    patient_accesses = relationship(
-        "PatientAccess",
-        back_populates="doctor",
-    )
+    # patient_accesses = relationship(
+    #     "PatientAccess",
+    #     back_populates="doctor",
+    # )
 
     def __repr__(self) -> str:
         return (
