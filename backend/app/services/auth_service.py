@@ -30,7 +30,7 @@ from app.schemas.auth import (
     RegisterResponse,
     UserResponse,
 )
-
+from app.exceptions.error_codes import ErrorCode
 
 class AuthService:
     """
@@ -119,7 +119,7 @@ class AuthService:
         if user is None:
             raise AuthenticationException(
                 message="Invalid email or password.",
-                code="INVALID_CREDENTIALS",
+                code=ErrorCode.INVALID_CREDENTIALS,
             )
 
         if not verify_password(
@@ -128,7 +128,7 @@ class AuthService:
         ):
             raise AuthenticationException(
                 message="Invalid email or password.",
-                code="INVALID_CREDENTIALS",
+                code=ErrorCode.INVALID_CREDENTIALS,
             )
 
         await self.user_repository.update_last_login(

@@ -41,6 +41,9 @@ app = FastAPI(
     version=settings.APP_VERSION,
     debug=settings.DEBUG,
     lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+    }
 )
 
 register_exception_handlers(app)

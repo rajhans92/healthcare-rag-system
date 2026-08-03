@@ -1,72 +1,110 @@
 """
-Authentication and authorization dependencies.
+Authentication and application dependencies.
 """
 
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 from jose import JWTError
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.jwt import decode_token
 from app.db.database import get_db
-from app.models.user import User, UserRole, UserStatus
+from app.exceptions.error_codes import ErrorCode
+from app.exceptions.exceptions import (
+    AuthenticationException,
+    AuthorizationException,
+)
+from app.models.user import (
+    User,
+    UserStatus,
+)
 from app.repositories.user_repository import UserRepository
-
-
 from app.services.auth_service import AuthService
-from app.services.patient_service import PatientService
 from app.services.doctor_service import DoctorService
+from app.services.patient_service import PatientService
 
+# -------------------------------------------------------------------------
+# Security
+# -------------------------------------------------------------------------
 
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
+security = HTTPBearer(
+    auto_error=False,
 )
 
 
+# -------------------------------------------------------------------------
+# Current User Dependency
+# -------------------------------------------------------------------------
+
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(security),
+    ],
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
-    Return currently authenticated user.
+    Returns the currently authenticated user.
     """
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid authentication credentials.",
-    )
+    if credentials is None:
+        raise AuthenticationException(
+            message="Authentication token is missing.",
+            code=ErrorCode.UNAUTHORIZED,
+        )
 
     try:
-        payload = decode_token(token)
+
+        payload = decode_token(
+            credentials.credentials,
+        )
 
         user_id = payload.get("sub")
 
-        if user_id is None:
-            raise credentials_exception
+        if not user_id:
+            raise AuthenticationException(
+                message="Invalid authentication token.",
+                code=ErrorCode.INVALID_TOKEN,
+            )
 
-    except JWTError:
-        raise credentials_exception
+        user_uuid = UUID(user_id)
+
+    except (JWTError, ValueError, TypeError):
+
+        raise AuthenticationException(
+            message="Invalid authentication token.",
+            code=ErrorCode.INVALID_TOKEN,
+        )
 
     repository = UserRepository(db)
 
     user = await repository.get_by_id(
-        UUID(user_id),
+        user_uuid,
     )
 
     if user is None:
-        raise credentials_exception
+        raise AuthenticationException(
+            message="User not found.",
+            code=ErrorCode.INVALID_TOKEN,
+        )
 
     if user.status != UserStatus.ACTIVE:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive.",
+        raise AuthorizationException(
+            message="User account is inactive.",
         )
 
     return user
+
+
+# -------------------------------------------------------------------------
+# Service Dependencies
+# -------------------------------------------------------------------------
 
 def get_auth_service(
     db: AsyncSession = Depends(get_db),
@@ -74,6 +112,7 @@ def get_auth_service(
     """
     Returns AuthService instance.
     """
+
     return AuthService(db)
 
 
@@ -83,7 +122,9 @@ def get_patient_service(
     """
     Returns PatientService instance.
     """
+
     return PatientService(db)
+
 
 def get_doctor_service(
     db: AsyncSession = Depends(get_db),
@@ -93,3 +134,13 @@ def get_doctor_service(
     """
 
     return DoctorService(db)
+
+
+# -------------------------------------------------------------------------
+# User Dependencies
+# -------------------------------------------------------------------------
+
+CurrentUser = Annotated[
+    User,
+    Depends(get_current_user),
+]
