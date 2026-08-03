@@ -1,0 +1,33 @@
+"""
+Application error codes.
+"""
+
+from enum import Enum
+
+
+class ErrorCode(str, Enum):
+
+    # Authentication
+    INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
+    INVALID_TOKEN = "INVALID_TOKEN"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+    UNAUTHORIZED = "UNAUTHORIZED"
+
+    # Authorization
+    FORBIDDEN = "FORBIDDEN"
+
+    # Validation
+    VALIDATION_ERROR = "VALIDATION_ERROR"
+
+    # Resource
+    RESOURCE_NOT_FOUND = "RESOURCE_NOT_FOUND"
+
+    # Conflict
+    EMAIL_ALREADY_EXISTS = "EMAIL_ALREADY_EXISTS"
+    REGISTRATION_NUMBER_EXISTS = "REGISTRATION_NUMBER_EXISTS"
+
+    # Database
+    DATABASE_ERROR = "DATABASE_ERROR"
+
+    # Generic
+    INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"

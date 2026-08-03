@@ -26,24 +26,14 @@ class Patient(Base, BaseEntity):
         index=True,
     )
 
-    first_name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
-    )
-
-    last_name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False,
-    )
-
     date_of_birth: Mapped[date] = mapped_column(
         Date,
-        nullable=False,
+        nullable=True,
     )
 
     gender: Mapped[Gender] = mapped_column(
         SqlEnum(Gender),
-        nullable=False,
+        nullable=True,
     )
 
     blood_group: Mapped[str | None] = mapped_column(
@@ -73,29 +63,29 @@ class Patient(Base, BaseEntity):
         back_populates="patient",
     )
 
-    encounters = relationship(
-        "Encounter",
-        back_populates="patient",
-        lazy="selectin",
-    )
+    # encounters = relationship(
+    #     "Encounter",
+    #     back_populates="patient",
+    #     lazy="selectin",
+    # )
+    # 
+    # medical_reports = relationship(
+    #     "MedicalReport",
+    #     back_populates="patient",
+    #     cascade="all, delete-orphan",
+    # )
 
-    medical_reports = relationship(
-        "MedicalReport",
-        back_populates="patient",
-        cascade="all, delete-orphan",
-    )
+    # chat_sessions = relationship(
+    #     "ChatSession",
+    #     back_populates="patient",
+    #     cascade="all, delete-orphan",
+    # )
 
-    chat_sessions = relationship(
-        "ChatSession",
-        back_populates="patient",
-        cascade="all, delete-orphan",
-    )
-
-    patient_accesses = relationship(
-        "PatientAccess",
-        back_populates="patient",
-        cascade="all, delete-orphan",
-    )
+    # patient_accesses = relationship(
+    #     "PatientAccess",
+    #     back_populates="patient",
+    #     cascade="all, delete-orphan",
+    # )
 
     def __repr__(self) -> str:
         return (

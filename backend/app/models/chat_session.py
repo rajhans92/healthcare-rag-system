@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseEntity
-
+from app.enums.roles import Role
 
 class ChatSession(Base, BaseEntity):
     __tablename__ = "chat_sessions"

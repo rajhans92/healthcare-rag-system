@@ -6,12 +6,12 @@ from sqlalchemy import String, Text, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseEntity
-
+from app.enums.roles import Role
 
 class UserRole(str, Enum):
-    ADMIN = "ADMIN"
-    DOCTOR = "DOCTOR"
-    PATIENT = "PATIENT"
+    ADMIN = Role.ADMIN
+    DOCTOR = Role.DOCTOR
+    PATIENT = Role.PATIENT
 
 
 class UserStatus(str, Enum):

@@ -2,142 +2,118 @@
 Global exception handlers.
 """
 
-from datetime import datetime, timezone
+import logging
+import traceback
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.exceptions.exceptions import AppException
+from app.core.config import settings
+from app.exceptions.error_codes import ErrorCode
+from app.exceptions.exceptions import (
+    AppException,
+    DatabaseException,
+)
+from app.schemas.error import (
+    ErrorDetail,
+    ErrorResponse,
+)
 
-def build_error_response(
-    *,
-    request: Request,
-    status_code: int,
-    error_code: str,
-    message: str,
-    details: dict | list | None = None,
-) -> JSONResponse:
-    """
-    Build a standard error response.
-    """
+logger = logging.getLogger(__name__)
 
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "success": False,
-            "error": {
-                "code": error_code,
-                "message": message,
-                "details": details,
-            },
-            "path": request.url.path,
-            "timestamp": datetime.now(
-                timezone.utc
-            ).isoformat(),
-        },
-    )
-
-async def app_exception_handler(
-    request: Request,
-    exc: AppException,
-):
-    """
-    Handle business exceptions.
-    """
-
-    return build_error_response(
-        request=request,
-        status_code=exc.status_code,
-        error_code=exc.error_code,
-        message=exc.message,
-        details=exc.details,
-    )
-
-async def validation_exception_handler(
-    request: Request,
-    exc: RequestValidationError,
-):
-
-    errors = []
-
-    for error in exc.errors():
-
-        field = ".".join(
-            str(item)
-            for item in error["loc"]
-            if item != "body"
-        )
-
-        errors.append(
-            {
-                "field": field,
-                "message": error["msg"],
-            }
-        )
-
-    return build_error_response(
-        request=request,
-        status_code=422,
-        error_code="VALIDATION_ERROR",
-        message="Validation failed.",
-        details=errors,
-    )
-
-async def http_exception_handler(
-    request: Request,
-    exc: HTTPException,
-):
-    """
-    Handle FastAPI HTTP exceptions.
-    """
-
-    return build_error_response(
-        request=request,
-        status_code=exc.status_code,
-        error_code="HTTP_ERROR",
-        message=str(exc.detail),
-    )
-
-async def unhandled_exception_handler(
-    request: Request,
-    exc: Exception,
-):
-    """
-    Handle unexpected exceptions.
-    """
-
-    return build_error_response(
-        request=request,
-        status_code=500,
-        error_code="INTERNAL_SERVER_ERROR",
-        message="An unexpected error occurred.",
-    )
 
 def register_exception_handlers(
     app: FastAPI,
 ) -> None:
     """
-    Register all exception handlers.
+    Register all global exception handlers.
     """
 
-    app.add_exception_handler(
-        AppException,
-        app_exception_handler,
-    )
+    @app.exception_handler(AppException)
+    async def app_exception_handler(
+        request: Request,
+        exc: AppException,
+    ):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=ErrorResponse(
+                success=False,
+                error={
+                    "code": exc.code.value,
+                    "message": exc.message,
+                    "details": exc.details,
+                },
+                path=request.url.path,
+            ).model_dump(mode="json"),
+        )
 
-    app.add_exception_handler(
-        RequestValidationError,
-        validation_exception_handler,
-    )
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request,
+        exc: RequestValidationError,
+    ):
+        return JSONResponse(
+            status_code=400,
+            content=ErrorResponse(
+                success=False,
+                error={
+                    "code": ErrorCode.VALIDATION_ERROR.value,
+                    "message": "Validation failed.",
+                    "details": exc.errors(),
+                },
+                path=request.url.path,
+            ).model_dump(mode="json"),
+        )
 
-    app.add_exception_handler(
-        HTTPException,
-        http_exception_handler,
-    )
+    @app.exception_handler(SQLAlchemyError)
+    async def database_exception_handler(
+        request: Request,
+        exc: SQLAlchemyError,
+    ):
+        logger.exception(
+            "Database Exception: %s",
+            str(exc),
+        )
 
-    app.add_exception_handler(
-        Exception,
-        unhandled_exception_handler,
-    )
+        database_exception = DatabaseException()
 
+        return JSONResponse(
+            status_code=database_exception.status_code,
+            content=ErrorResponse(
+                success=False,
+                error={
+                    "code": database_exception.code.value,
+                    "message": database_exception.message,
+                    "details": None,
+                },
+                path=request.url.path,
+            ).model_dump(mode="json"),
+        )
+
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(
+        request: Request,
+        exc: Exception,
+    ):
+        logger.exception(
+            "Unhandled Exception: %s",
+            str(exc),
+        )
+
+        if settings.DEBUG:
+            traceback.print_exc()
+
+        return JSONResponse(
+            status_code=500,
+            content=ErrorResponse(
+                success=False,
+                error={
+                    "code": ErrorCode.INTERNAL_SERVER_ERROR.value,
+                    "message": "An unexpected error occurred.",
+                    "details": str(exc) if settings.DEBUG else None,
+                },
+                path=request.url.path,
+            ).model_dump(mode="json"),
+        )

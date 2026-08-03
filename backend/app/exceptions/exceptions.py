@@ -1,10 +1,8 @@
 """
-Custom application exceptions.
-
-All business exceptions should inherit from AppException.
+Application custom exceptions.
 """
 
-from typing import Any
+from app.exceptions.error_codes import ErrorCode
 
 
 class AppException(Exception):
@@ -15,96 +13,72 @@ class AppException(Exception):
     def __init__(
         self,
         message: str,
-        status_code: int = 400,
-        error_code: str = "APPLICATION_ERROR",
-        details: dict[str, Any] | None = None,
+        code: ErrorCode,
+        status_code: int,
+        details: dict | None = None,
     ):
         self.message = message
+        self.code = code
         self.status_code = status_code
-        self.error_code = error_code
-        self.details = details or {}
+        self.details = details
 
         super().__init__(message)
 
-class InvalidCredentialsException(AppException):
+
+class ValidationException(AppException):
     """
-    Invalid email or password.
+    Request validation failed.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        message: str = "Validation failed.",
+        details: dict | None = None,
+    ):
         super().__init__(
-            message="Invalid email or password.",
+            message=message,
+            code=ErrorCode.VALIDATION_ERROR,
+            status_code=400,
+            details=details,
+        )
+
+
+class AuthenticationException(AppException):
+    """
+    Authentication failed.
+    """
+
+    def __init__(
+        self,
+        message: str = "Authentication failed.",
+        code: ErrorCode = ErrorCode.INVALID_CREDENTIALS,
+    ):
+        super().__init__(
+            message=message,
+            code=code,
             status_code=401,
-            error_code="INVALID_CREDENTIALS",
         )
 
 
-class UserAlreadyExistsException(AppException):
+class AuthorizationException(AppException):
     """
-    User already exists.
+    User is not authorized.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        message: str = "You are not authorized to perform this action.",
+    ):
         super().__init__(
-            message="User already exists.",
-            status_code=409,
-            error_code="USER_ALREADY_EXISTS",
-        )
-
-
-class UserNotFoundException(AppException):
-    """
-    User not found.
-    """
-
-    def __init__(self):
-        super().__init__(
-            message="User not found.",
-            status_code=404,
-            error_code="USER_NOT_FOUND",
-        )
-
-
-class InactiveUserException(AppException):
-    """
-    User account is inactive.
-    """
-
-    def __init__(self):
-        super().__init__(
-            message="User account is inactive.",
+            message=message,
+            code=ErrorCode.FORBIDDEN,
             status_code=403,
-            error_code="USER_INACTIVE",
         )
 
-class ForbiddenException(AppException):
-    """
-    Access denied.
-    """
-
-    def __init__(self):
-        super().__init__(
-            message="Access denied.",
-            status_code=403,
-            error_code="FORBIDDEN",
-        )
-
-
-class UnauthorizedException(AppException):
-    """
-    Authentication required.
-    """
-
-    def __init__(self):
-        super().__init__(
-            message="Authentication required.",
-            status_code=401,
-            error_code="UNAUTHORIZED",
-        )
 
 class ResourceNotFoundException(AppException):
     """
-    Generic resource not found.
+    Resource not found.
     """
 
     def __init__(
@@ -113,22 +87,55 @@ class ResourceNotFoundException(AppException):
     ):
         super().__init__(
             message=f"{resource_name} not found.",
+            code=ErrorCode.RESOURCE_NOT_FOUND,
             status_code=404,
-            error_code="RESOURCE_NOT_FOUND",
         )
 
-class ValidationException(AppException):
+
+class ConflictException(AppException):
     """
-    Business validation failed.
+    Duplicate resource.
     """
 
     def __init__(
         self,
         message: str,
+        code: ErrorCode,
     ):
         super().__init__(
             message=message,
-            status_code=400,
-            error_code="VALIDATION_ERROR",
+            code=code,
+            status_code=409,
         )
 
+
+class DatabaseException(AppException):
+    """
+    Database operation failed.
+    """
+
+    def __init__(
+        self,
+        message: str = "Database operation failed.",
+    ):
+        super().__init__(
+            message=message,
+            code=ErrorCode.DATABASE_ERROR,
+            status_code=500,
+        )
+
+
+class InternalServerException(AppException):
+    """
+    Unexpected application error.
+    """
+
+    def __init__(
+        self,
+        message: str = "Internal server error.",
+    ):
+        super().__init__(
+            message=message,
+            code=ErrorCode.INTERNAL_SERVER_ERROR,
+            status_code=500,
+        )
