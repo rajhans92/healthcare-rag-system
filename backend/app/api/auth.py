@@ -1,26 +1,28 @@
 """
 Authentication API endpoints.
 """
-from app.core.dependencies import get_current_user
-from app.schemas.auth import UserResponse
-from app.models.user import User
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.database import get_db
+from app.core.dependencies import (
+    CurrentUser,
+    get_auth_service,
+)
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
+    UserResponse,
 )
 from app.services.auth_service import AuthService
+from app.schemas.auth import CurrentUserResponse
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
+
 
 @router.post(
     "/register",
@@ -29,15 +31,14 @@ router = APIRouter(
 )
 async def register(
     request: RegisterRequest,
-    db: AsyncSession = Depends(get_db),
+    service: AuthService = Depends(get_auth_service),
 ) -> RegisterResponse:
     """
     Register a new user.
     """
 
-    service = AuthService(db)
-
     return await service.register(request)
+
 
 @router.post(
     "/login",
@@ -46,26 +47,24 @@ async def register(
 )
 async def login(
     request: LoginRequest,
-    db: AsyncSession = Depends(get_db),
+    service: AuthService = Depends(get_auth_service),
 ) -> LoginResponse:
     """
     Authenticate user.
     """
 
-    service = AuthService(db)
-
     return await service.login(request)
+
 
 @router.get(
     "/me",
-    response_model=UserResponse,
+    response_model=CurrentUserResponse,
 )
 async def me(
-    current_user: User = Depends(get_current_user),
-) -> UserResponse:
-    """
-    Get current logged-in user.
-    """
+    current_user: CurrentUser,
+    service: AuthService = Depends(get_auth_service),
+):
 
-    return UserResponse.model_validate(current_user)
-
+    return await service.get_current_user_profile(
+        current_user,
+    )

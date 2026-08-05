@@ -9,9 +9,9 @@ from app.db.base import Base, BaseEntity
 from app.enums.roles import Role
 
 class UserRole(str, Enum):
-    ADMIN = Role.ADMIN
-    DOCTOR = Role.DOCTOR
-    PATIENT = Role.PATIENT
+    ADMIN = Role.ADMIN.value
+    DOCTOR = Role.DOCTOR.value
+    PATIENT = Role.PATIENT.value
 
 
 class UserStatus(str, Enum):
