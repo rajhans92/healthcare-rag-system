@@ -19,7 +19,10 @@ from app.exceptions.exceptions import (
     AuthenticationException,
     ConflictException,
 )
+from app.schemas.auth import CurrentUserResponse
 from app.models.patient import Patient
+from app.models.doctor import Doctor
+from app.repositories.doctor_repository import DoctorRepository
 from app.models.user import User
 from app.repositories.patient_repository import PatientRepository
 from app.repositories.user_repository import UserRepository
@@ -31,6 +34,9 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.exceptions.error_codes import ErrorCode
+
+from app.schemas.doctor import DoctorResponse
+from app.schemas.patient import PatientResponse
 
 class AuthService:
     """
@@ -44,6 +50,7 @@ class AuthService:
         self.session = session
         self.user_repository = UserRepository(session)
         self.patient_repository = PatientRepository(session)
+        self.doctor_repository = DoctorRepository(session)
 
     async def register(
         self,
@@ -61,7 +68,7 @@ class AuthService:
             ):
                 raise ConflictException(
                     message="Email already registered.",
-                    code="EMAIL_ALREADY_EXISTS",
+                    code=ErrorCode.EMAIL_ALREADY_EXISTS,
                 )
 
             hashed_password = hash_password(
@@ -73,22 +80,21 @@ class AuthService:
                 password_hash=hashed_password,
                 first_name=request.first_name,
                 last_name=request.last_name,
-                role=request.role,
+                role=request.role.value,
             )
 
             user = await self.user_repository.create_user(
                 user
             )
 
-            # Automatically create Patient profile
             if request.role == Role.PATIENT:
-
-                patient = Patient(
-                    user_id=user.id,
+                await self.patient_repository.create_for_user(
+                    user.id
                 )
 
-                await self.patient_repository.create(
-                    patient
+            elif request.role == Role.DOCTOR:
+                await self.doctor_repository.create_for_user(
+                    user.id
                 )
 
             await self.session.commit()
@@ -155,4 +161,43 @@ class AuthService:
             user=UserResponse.model_validate(
                 user
             ),
+        )
+        
+    async def get_current_user_profile(
+        self,
+        current_user: User,
+    ) -> CurrentUserResponse:
+
+        profile = None
+
+        if current_user.role.value == Role.PATIENT.value:
+
+            patient = await self.patient_repository.get_by_user_id(
+                current_user.id,
+            )
+
+            if patient:
+                profile = PatientResponse.model_validate(
+                    patient
+                )
+
+        elif current_user.role.value == Role.DOCTOR.value:
+
+            doctor = await self.doctor_repository.get_by_user_id(
+                current_user.id,
+            )
+
+            if doctor:
+                profile = DoctorResponse.model_validate(
+                    doctor
+                )
+
+        return CurrentUserResponse(
+            id=current_user.id,
+            email=current_user.email,
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            role=current_user.role.value,
+            status=current_user.status,
+            profile=profile,
         )
