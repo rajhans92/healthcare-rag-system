@@ -8,6 +8,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.user import UserRole
 
+from app.models.user import UserRole, UserStatus
+from app.schemas.patient import PatientResponse
+from app.schemas.doctor import DoctorResponse
 
 class RegisterRequest(BaseModel):
     """
@@ -128,3 +131,15 @@ class LoginResponse(BaseModel):
     token_type: str = "Bearer"
 
     user: UserResponse
+
+class CurrentUserResponse(BaseModel):
+
+    id: UUID
+    email: str
+    first_name: str
+    last_name: str
+
+    role: UserRole
+    status: UserStatus
+
+    profile: PatientResponse | DoctorResponse | None
