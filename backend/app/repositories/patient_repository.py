@@ -74,3 +74,18 @@ class PatientRepository(BaseRepository[Patient]):
         await self.session.refresh(patient)
 
         return patient
+    
+    async def create_for_user(
+        self,
+        user_id: UUID,
+    ) -> Patient:
+
+        patient = Patient(
+            user_id=user_id,
+        )
+
+        self.session.add(patient)
+
+        await self.session.flush()
+
+        return patient
