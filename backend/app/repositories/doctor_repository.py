@@ -110,3 +110,18 @@ class DoctorRepository(BaseRepository[Doctor]):
         )
 
         return result.scalars().all()
+    
+    async def create_for_user(
+        self,
+        user_id: UUID,
+    ) -> Doctor:
+
+        doctor = Doctor(
+            user_id=user_id,
+        )
+
+        self.session.add(doctor)
+
+        await self.session.flush()
+
+        return doctor
