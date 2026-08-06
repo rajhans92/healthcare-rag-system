@@ -17,7 +17,7 @@ from app.schemas.doctor import (
     UpdateDoctorRequest,
 )
 from app.services.doctor_service import DoctorService
-
+from app.schemas.auth import CurrentUserResponse
 router = APIRouter(
     prefix="/doctors",
     tags=["Doctors"],
@@ -25,7 +25,7 @@ router = APIRouter(
 
 @router.get(
     "/me",
-    response_model=ApiResponse[DoctorResponse],
+    response_model=CurrentUserResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_my_profile(
@@ -40,9 +40,14 @@ async def get_my_profile(
         current_user.id,
     )
 
-    return ApiResponse(
-        message="Doctor profile retrieved successfully.",
-        data=doctor,
+    return CurrentUserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        role=current_user.role.value,
+        status=current_user.status,
+        profile=doctor,
     )
 
 @router.put(
@@ -71,11 +76,12 @@ async def update_my_profile(
 
 @router.get(
     "/{doctor_id}",
-    response_model=ApiResponse[DoctorResponse],
+    response_model=ApiResponse[CurrentUserResponse],
     status_code=status.HTTP_200_OK,
 )
 async def get_doctor_by_id(
     doctor_id: UUID,
+    current_user: User = Depends(get_current_user),
     service: DoctorService = Depends(get_doctor_service),
 ):
     """

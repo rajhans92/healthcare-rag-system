@@ -118,6 +118,8 @@ class DoctorRepository(BaseRepository[Doctor]):
 
         doctor = Doctor(
             user_id=user_id,
+            license_number="",
+            specialization=""
         )
 
         self.session.add(doctor)
