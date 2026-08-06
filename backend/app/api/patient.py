@@ -17,6 +17,7 @@ from app.schemas.patient import (
     UpdatePatientRequest,
 )
 from app.services.patient_service import PatientService
+from app.schemas.auth import CurrentUserResponse
 
 router = APIRouter(
     prefix="/patients",
@@ -25,7 +26,7 @@ router = APIRouter(
 
 @router.get(
     "/me",
-    response_model=ApiResponse[PatientResponse],
+    response_model=CurrentUserResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_my_profile(
@@ -40,9 +41,14 @@ async def get_my_profile(
         current_user.id,
     )
 
-    return ApiResponse(
-        message="Patient profile retrieved successfully.",
-        data=patient,
+    return CurrentUserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
+        role=current_user.role.value,
+        status=current_user.status,
+        profile=patient,
     )
 
 @router.put(
@@ -70,10 +76,11 @@ async def update_my_profile(
 
 @router.get(
     "/{patient_id}",
-    response_model=ApiResponse[PatientResponse],
+    response_model=ApiResponse[CurrentUserResponse],
 )
 async def get_patient_by_id(
     patient_id: UUID,
+    current_user: User = Depends(get_current_user),
     service: PatientService = Depends(get_patient_service),
 ):
     """
@@ -88,4 +95,5 @@ async def get_patient_by_id(
         message="Patient retrieved successfully.",
         data=patient,
     )
+    
 
