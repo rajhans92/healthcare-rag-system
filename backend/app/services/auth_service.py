@@ -5,7 +5,7 @@ Contains all authentication business logic.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from uuid import UUID
 from app.core.jwt import (
     create_access_token,
     create_refresh_token,
@@ -20,8 +20,6 @@ from app.exceptions.exceptions import (
     ConflictException,
 )
 from app.schemas.auth import CurrentUserResponse
-from app.models.patient import Patient
-from app.models.doctor import Doctor
 from app.repositories.doctor_repository import DoctorRepository
 from app.models.user import User
 from app.repositories.patient_repository import PatientRepository
@@ -37,6 +35,7 @@ from app.exceptions.error_codes import ErrorCode
 
 from app.schemas.doctor import DoctorResponse
 from app.schemas.patient import PatientResponse
+from app.exceptions.exceptions import ResourceNotFoundException
 
 class AuthService:
     """
@@ -201,3 +200,17 @@ class AuthService:
             status=current_user.status,
             profile=profile,
         )
+    
+    async def get_user_by_id(
+        self,
+        user_id: UUID,
+    ) -> UserResponse:
+
+        user = await self.user_repository.get_by_id(
+            user_id
+        )
+
+        if user is None:
+            raise ResourceNotFoundException("User")
+
+        return UserResponse.model_validate(user)
