@@ -17,7 +17,8 @@ from app.schemas.doctor import (
     DoctorResponse,
     UpdateDoctorRequest,
 )
-
+from app.schemas.auth import CurrentUserResponse
+from app.repositories.user_repository import UserRepository
 
 class DoctorService:
     """
@@ -30,6 +31,7 @@ class DoctorService:
     ):
         self.session = session
         self.doctor_repository = DoctorRepository(session)
+        self.user_repository = UserRepository(session)
 
     async def get_my_profile(
         self,
@@ -51,7 +53,7 @@ class DoctorService:
     async def get_doctor_by_id(
         self,
         doctor_id: UUID,
-    ) -> DoctorResponse:
+    ) -> CurrentUserResponse:
         """
         Get doctor by doctor ID.
         """
@@ -63,7 +65,20 @@ class DoctorService:
         if doctor is None:
             raise ResourceNotFoundException("Doctor")
 
-        return DoctorResponse.model_validate(doctor)
+        user_details = await self.user_repository.get_by_id(doctor.user_id)
+        
+        if user_details is None:
+            raise ResourceNotFoundException("Doctor")
+
+        return CurrentUserResponse(
+            id=user_details.id,
+            email=user_details.email,
+            first_name=user_details.first_name,
+            last_name=user_details.last_name,
+            role=user_details.role.value,
+            status=user_details.status,
+            profile=DoctorResponse.model_validate(doctor),
+        )
 
     async def update_profile(
         self,
@@ -130,6 +145,21 @@ class DoctorService:
             limit=page_size,
             offset=offset,
         )
+
+        set_of_users = []
+        for doctor in doctors:
+            user_details = await self.user_repository.get_by_id(doctor.user_id)
+            
+            if user_details is not None:
+                set_of_users.append(CurrentUserResponse(
+                    id=user_details.id,
+                    email=user_details.email,
+                    first_name=user_details.first_name,
+                    last_name=user_details.last_name,
+                    role=user_details.role.value,
+                    status=user_details.status,
+                    profile=DoctorResponse.model_validate(doctor),
+                ))
 
         return [
             DoctorResponse.model_validate(
