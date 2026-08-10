@@ -118,3 +118,26 @@ class EncounterRepository(BaseRepository[Encounter]):
         await self.session.refresh(encounter)
 
         return encounter
+    
+
+    async def get_by_doctor_and_patient(
+        self,
+        doctor_id: UUID,
+        patient_id: UUID,
+    ) -> list[Encounter]:
+        """
+        Get encounters for a doctor and patient.
+        """
+
+        result = await self.session.execute(
+            select(Encounter)
+            .where(
+                Encounter.doctor_id == doctor_id,
+                Encounter.patient_id == patient_id,
+            )
+            .order_by(
+                Encounter.created_at.desc()
+            )
+        )
+
+        return list(result.scalars().all())

@@ -19,6 +19,9 @@ from app.middleware.timing import TimingMiddleware
 from app.db.initializer import initialize_database
 from app.api.patient import router as patient_router
 from app.api.doctor import router as doctor_router
+from app.api.encounter import router as encounter_router
+from app.api.diagnosis import router as diagnosis_router
+from app.api.medical_document import router as medical_document_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -110,5 +113,20 @@ app.include_router(
 
 app.include_router(
     doctor_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    encounter_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    diagnosis_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    medical_document_router,
     prefix=settings.API_V1_PREFIX,
 )
