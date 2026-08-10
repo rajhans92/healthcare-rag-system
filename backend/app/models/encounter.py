@@ -109,6 +109,10 @@ class Encounter(Base, BaseEntity):
         back_populates="encounter",
     )
 
+    medical_documents = relationship(
+        "MedicalDocument",
+        back_populates="encounter",
+    )
     def __repr__(self):
         return (
             f"<Encounter("
