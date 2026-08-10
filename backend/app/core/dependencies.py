@@ -135,6 +135,20 @@ def get_doctor_service(
 
     return DoctorService(db)
 
+async def require_doctor(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Require the authenticated user to be a doctor.
+    """
+
+    if current_user.role != UserRole.DOCTOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doctor access required.",
+        )
+
+    return current_user
 
 # -------------------------------------------------------------------------
 # User Dependencies

@@ -96,6 +96,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    #=====================
+    # Aws S3 Bucket Name
+    #=====================
+
+    AWS_REGION: str
+    AWS_S3_BUCKET_NAME: str
+    AWS_ACCESS_KEY_ID= str
+    AWS_SECRET_ACCESS_KEY= str       
 
 @lru_cache
 def get_settings() -> Settings:
