@@ -4,6 +4,7 @@ Medical document service.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from uuid import UUID, uuid4
 
@@ -15,15 +16,18 @@ from app.models.medical_document import (
     MedicalDocument,
 )
 from app.models.user import User, UserRole
+from app.repositories.doctor_repository import DoctorRepository
 from app.repositories.encounter_repository import EncounterRepository
 from app.repositories.medical_document_repository import (
     MedicalDocumentRepository,
 )
+from app.repositories.patient_access_repository import PatientAccessRepository
 from app.repositories.patient_repository import PatientRepository
 from app.schemas.medical_document import (
     CreateMedicalDocumentRequest,
     MedicalDocumentResponse,
 )
+from app.services.document_ingestion_service import DocumentIngestionService
 from app.services.s3_service import S3Service
 
 logger = logging.getLogger(__name__)
@@ -64,6 +68,7 @@ class MedicalDocumentService:
             EncounterRepository(session)
         )
 
+        self.document_ingestion_service = DocumentIngestionService(session)
         self.s3_service = S3Service()
 
     # ==========================================================
@@ -149,7 +154,26 @@ class MedicalDocumentService:
 
         return encounter
 
-    def _validate_user_access(
+    async def _doctor_has_approved_access(
+        self,
+        user: User,
+        patient_id: UUID,
+    ) -> bool:
+        """Check whether the current doctor has approved access to a patient."""
+        if user.role != UserRole.DOCTOR:
+            return True
+
+        doctor = await DoctorRepository(self.session).get_by_user_id(user.id)
+        if doctor is None:
+            return False
+
+        access = await PatientAccessRepository(self.session).get_active_access(
+            patient_id,
+            doctor.id,
+        )
+        return access is not None
+
+    async def _validate_user_access(
         self,
         user: User,
         patient,
@@ -168,12 +192,10 @@ class MedicalDocumentService:
                 )
 
         elif user.role == UserRole.DOCTOR:
-            # Doctor authorization will later use our
-            # doctor-patient access relationship.
-            #
-            # For now, the encounter validation provides
-            # the basic authorization boundary.
-            pass
+            if not await self._doctor_has_approved_access(user, patient.id):
+                raise PermissionError(
+                    "You do not have approved access to this patient record."
+                )
 
         else:
             raise PermissionError(
@@ -260,7 +282,7 @@ class MedicalDocumentService:
             # Validate user access
             # --------------------------------------------------
 
-            self._validate_user_access(
+            await self._validate_user_access(
                 user=user,
                 patient=patient,
             )
@@ -380,7 +402,7 @@ class MedicalDocumentService:
     ) -> MedicalDocumentResponse:
         """
         Confirm that the file was successfully uploaded
-        to S3.
+        to S3 and schedule processing.
         """
 
         try:
@@ -418,7 +440,7 @@ class MedicalDocumentService:
                 )
 
             # --------------------------------------------------
-            # Verify S3 object
+            # Verify S3 object and detect duplicate uploads
             # --------------------------------------------------
 
             exists = self.s3_service.object_exists(
@@ -430,6 +452,14 @@ class MedicalDocumentService:
                     "File has not been uploaded to S3."
                 )
 
+            raw_bytes = self.s3_service.download_object(document.file_key)
+            file_hash = hashlib.sha256(raw_bytes).hexdigest()
+            if await self.document_ingestion_service.detect_duplicate_upload(file_hash):
+                raise ValueError(
+                    "Duplicate document upload detected."
+                )
+            self.document_ingestion_service.mark_file_hash_seen(file_hash)
+
             # --------------------------------------------------
             # Mark document as pending processing
             # --------------------------------------------------
@@ -437,14 +467,10 @@ class MedicalDocumentService:
             document.processing_status = (
                 DocumentProcessingStatus.PENDING
             )
-
             document.processing_error = None
 
             await self.session.commit()
-
-            await self.session.refresh(
-                document
-            )
+            await self.session.refresh(document)
 
             logger.info(
                 "Document upload confirmed "
@@ -452,9 +478,31 @@ class MedicalDocumentService:
                 document_id,
             )
 
-            # Queue publishing will be added next.
-            #
-            # For now the document remains PENDING.
+            content = await self.document_ingestion_service.parse_document_text(document)
+            processing_result = await self.document_ingestion_service.process_document(
+                document_id=document.id,
+                patient_id=document.patient_id,
+                content=content,
+                metadata={
+                    "file_name": document.file_name,
+                    "mime_type": document.mime_type,
+                    "document_type": document.document_type.value,
+                    "source": document.source.value,
+                },
+            )
+
+            document.processing_status = (
+                DocumentProcessingStatus.COMPLETED
+            )
+            document.processing_error = None
+            await self.session.commit()
+            await self.session.refresh(document)
+
+            logger.info(
+                "Document processing completed for document=%s result=%s",
+                document_id,
+                processing_result,
+            )
 
             return MedicalDocumentResponse.model_validate(
                 document
@@ -468,6 +516,19 @@ class MedicalDocumentService:
 
             await self.session.rollback()
 
+            raise
+
+    async def process_pending_documents(
+        self,
+        limit: int = 20,
+    ) -> list[dict]:
+        """
+        Process all pending documents in queue.
+        """
+        try:
+            return await self.document_ingestion_service.process_pending_documents(limit=limit)
+        except Exception:
+            logger.exception("Failed to process pending medical documents.")
             raise
     
         # ==========================================================
@@ -515,11 +576,13 @@ class MedicalDocumentService:
         # ------------------------------------------------------
 
         elif user.role == UserRole.DOCTOR:
+            doctor = await DoctorRepository(self.session).get_by_user_id(user.id)
+            if doctor is None:
+                raise PermissionError(
+                    "Doctor profile not found."
+                )
 
-            # If the document belongs to an encounter,
-            # verify that the doctor owns that encounter.
             if document.encounter_id is not None:
-
                 encounter = (
                     await self.encounter_repository
                     .get_by_id(
@@ -532,23 +595,25 @@ class MedicalDocumentService:
                         "Associated encounter not found."
                     )
 
-                if encounter.doctor_id != user.id:
+                if encounter.doctor_id != doctor.id:
+                    if not await PatientAccessRepository(self.session).get_active_access(
+                        document.patient_id,
+                        doctor.id,
+                    ):
+                        raise PermissionError(
+                            "You are not authorized to access "
+                            "this medical document."
+                        )
+
+            else:
+                if not await PatientAccessRepository(self.session).get_active_access(
+                    document.patient_id,
+                    doctor.id,
+                ):
                     raise PermissionError(
                         "You are not authorized to access "
                         "this medical document."
                     )
-
-            else:
-                # Patient-uploaded documents without an
-                # encounter require a proper patient-access
-                # relationship.
-                #
-                # This authorization will be implemented
-                # when we add the Doctor-Patient access module.
-                raise PermissionError(
-                    "You are not authorized to access "
-                    "this medical document."
-                )
 
         else:
             raise PermissionError(
@@ -601,22 +666,24 @@ class MedicalDocumentService:
         # ------------------------------------------------------
 
         elif user.role == UserRole.DOCTOR:
-
-            # For now, verify that the doctor has at least
-            # one encounter with this patient.
-            #
-            # Later this will use a dedicated
-            # doctor-patient access relationship.
+            doctor = await DoctorRepository(self.session).get_by_user_id(user.id)
+            if doctor is None:
+                raise PermissionError(
+                    "Doctor profile not found."
+                )
 
             encounters = (
                 await self.encounter_repository
                 .get_by_doctor_and_patient(
-                    doctor_id=user.id,
+                    doctor_id=doctor.id,
                     patient_id=patient_id,
                 )
             )
 
-            if not encounters:
+            if not encounters and not await PatientAccessRepository(self.session).get_active_access(
+                patient_id,
+                doctor.id,
+            ):
                 raise PermissionError(
                     "You are not authorized to access "
                     "this patient's medical documents."

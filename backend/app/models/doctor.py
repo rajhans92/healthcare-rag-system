@@ -1,11 +1,17 @@
+from decimal import Decimal
+
 from sqlalchemy import (
+    DECIMAL,
     ForeignKey,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from uuid import UUID, uuid4
 from app.db.base import Base, BaseEntity
+from app.models.encounter import Encounter  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 
 class Doctor(Base, BaseEntity):
@@ -25,9 +31,26 @@ class Doctor(Base, BaseEntity):
         index=True,
     )
 
+    registration_number: Mapped[str | None] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=True,
+        index=True,
+    )
+
     specialization: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
+    )
+
+    qualification: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    experience_years: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
     )
 
     phone_number: Mapped[str | None] = mapped_column(
@@ -38,8 +61,19 @@ class Doctor(Base, BaseEntity):
         String(255),
     )
 
-    years_of_experience: Mapped[int | None] = mapped_column(
-        Integer,
+    department: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    consultation_fee: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(10, 2),
+        nullable=True,
+    )
+
+    bio: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
     )
 
     # Relationships
@@ -49,15 +83,15 @@ class Doctor(Base, BaseEntity):
         back_populates="doctor",
     )
 
-    # encounters = relationship(
-    #     "Encounter",
-    #     back_populates="doctor",
-    # )
+    encounters = relationship(
+        "Encounter",
+        back_populates="doctor",
+    )
 
-    # patient_accesses = relationship(
-    #     "PatientAccess",
-    #     back_populates="doctor",
-    # )
+    patient_accesses = relationship(
+        "PatientAccess",
+        back_populates="doctor",
+    )
 
     def __repr__(self) -> str:
         return (
