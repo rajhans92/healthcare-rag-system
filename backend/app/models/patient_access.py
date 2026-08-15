@@ -13,6 +13,9 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseEntity
+from app.models.doctor import Doctor  # noqa: F401
+from app.models.patient import Patient  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 
 class AccessStatus(str, Enum):

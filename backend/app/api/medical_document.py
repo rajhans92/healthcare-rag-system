@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user
 from app.db.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.medical_document import (
     CreateMedicalDocumentRequest,
     MedicalDocumentResponse,
@@ -158,3 +158,30 @@ async def get_medical_document(
         document_id=document_id,
         user=current_user,
     )
+
+
+# ==========================================================
+# Process Pending Documents
+# ==========================================================
+
+@router.post(
+    "/process-pending",
+    status_code=status.HTTP_200_OK,
+)
+async def process_pending_documents(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Process the queue of pending document uploads.
+    """
+    if current_user.role not in {UserRole.ADMIN, UserRole.DOCTOR}:
+        raise PermissionError(
+            "Only administrators and doctors can process queued medical documents."
+        )
+
+    service = MedicalDocumentService(db)
+    return {
+        "processed": await service.process_pending_documents(limit=limit),
+    }

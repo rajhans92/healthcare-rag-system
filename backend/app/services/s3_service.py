@@ -119,6 +119,35 @@ class S3Service:
     # Generate Download URL
     # ==========================================================
 
+    def download_object(
+        self,
+        file_key: str,
+    ) -> bytes:
+        """
+        Download an object from S3 for parsing and indexing.
+        """
+
+        try:
+            response = self.client.get_object(
+                Bucket=self.bucket_name,
+                Key=file_key,
+            )
+            body = response.get("Body")
+            if body is None:
+                return b""
+            return body.read()
+
+        except (
+            ClientError,
+            BotoCoreError,
+        ) as exc:
+            logger.exception(
+                "Failed to download S3 object for document parsing."
+            )
+            raise RuntimeError(
+                "Unable to download document from S3."
+            ) from exc
+
     def generate_download_url(
         self,
         file_key: str,

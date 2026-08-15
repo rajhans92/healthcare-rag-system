@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     """
     Application settings.
     """
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
@@ -24,11 +25,8 @@ class Settings(BaseSettings):
     # ==========================
 
     APP_NAME: str = "Healthcare Knowledge RAG"
-
     APP_VERSION: str = "1.0.0"
-
     DEBUG: bool = False
-
     API_V1_PREFIX: str = "/api/v1"
 
     # ==========================
@@ -36,11 +34,8 @@ class Settings(BaseSettings):
     # ==========================
 
     JWT_SECRET_KEY: str = Field(...)
-
     JWT_ALGORITHM: str = "HS256"
-
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # ==========================
@@ -48,62 +43,66 @@ class Settings(BaseSettings):
     # ==========================
 
     AWS_REGION: str | None = None
-
     AWS_ACCESS_KEY_ID: str | None = None
-
     AWS_SECRET_ACCESS_KEY: str | None = None
-
     S3_BUCKET_NAME: str | None = None
+    AWS_S3_BUCKET_NAME: str | None = None
 
     # ==========================
     # Qdrant
     # ==========================
 
-    QDRANT_URL: str | None = None
+    VECTOR_DB_BACKEND: str = "memory"
+    VECTOR_DB_HOST: str | None = None
+    VECTOR_DB_PORT: int | None = None
+    VECTOR_DB_NAME: str | None = None
+    VECTOR_DB_USER: str | None = None
+    VECTOR_DB_PASSWORD: str | None = None
 
+    QDRANT_URL: str | None = None
     QDRANT_API_KEY: str | None = None
 
     # ==========================
-    # OpenAI
+    # OpenAI / LLM
     # ==========================
 
     OPENAI_API_KEY: str | None = None
-
+    LLM_PROVIDER: str = "openai"
     LLM_MODEL: str | None = None
-
     EMBEDDING_MODEL: str | None = None
+    EMBEDDING_DIMENSION: int = 32
+    VECTOR_COLLECTION_NAME: str = "healthcare_documents"
+    MAX_CONTEXT_TOKENS: int = 8000
+    MAX_OUTPUT_TOKENS: int = 1000
+    MAX_RETRIEVED_CHUNKS: int = 5
+
+    # ==========================
+    # OCR / Document parsing
+    # ==========================
+
+    OCR_ENABLED: bool = True
+    OCR_LANGUAGE: str = "eng"
+    TESSERACT_CMD: str | None = None
 
     # ==========================
     # Database
     # ==========================
 
     DATABASE_URL: str
-
     DB_ECHO: bool = False
-
     DB_POOL_SIZE: int = 10
-
     DB_MAX_OVERFLOW: int = 20
-
     DB_POOL_TIMEOUT: int = 30
-
     DB_POOL_RECYCLE: int = 1800
-
     AUTO_CREATE_TABLES: bool = False
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore",
-    )
+    # ==========================
+    # Background ingestion worker
+    # ==========================
 
-    #=====================
-    # Aws S3 Bucket Name
-    #=====================
-
-    AWS_REGION: str
-    AWS_S3_BUCKET_NAME: str
-    AWS_ACCESS_KEY_ID= str
-    AWS_SECRET_ACCESS_KEY= str       
+    INGESTION_WORKER_ENABLED: bool = True
+    INGESTION_WORKER_INTERVAL_SECONDS: int = 30
+    INGESTION_WORKER_BATCH_SIZE: int = 20
 
 @lru_cache
 def get_settings() -> Settings:

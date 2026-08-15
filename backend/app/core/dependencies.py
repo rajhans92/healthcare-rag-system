@@ -27,6 +27,7 @@ from app.models.user import (
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.doctor_service import DoctorService
+from app.services.patient_access_service import PatientAccessService
 from app.services.patient_service import PatientService
 
 # -------------------------------------------------------------------------
@@ -134,6 +135,13 @@ def get_doctor_service(
     """
 
     return DoctorService(db)
+
+
+def get_patient_access_service(
+    db: AsyncSession = Depends(get_db),
+) -> PatientAccessService:
+    """Return PatientAccessService instance."""
+    return PatientAccessService(db)
 
 async def require_doctor(
     current_user: User = Depends(get_current_user),

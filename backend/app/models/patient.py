@@ -2,11 +2,13 @@ from datetime import date
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import Date, Enum as SqlEnum, ForeignKey, String, Text
+from sqlalchemy import Date, Enum as SqlEnum, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, BaseEntity
+from app.models.encounter import Encounter  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 
 class Gender(str, Enum):
@@ -52,8 +54,38 @@ class Patient(Base, BaseEntity):
         String(20),
     )
 
+    height_cm: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    weight_kg: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
     address: Mapped[str | None] = mapped_column(
         Text,
+    )
+
+    city: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    state: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    country: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    postal_code: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
     )
 
     # Relationships
@@ -63,29 +95,35 @@ class Patient(Base, BaseEntity):
         back_populates="patient",
     )
 
-    # encounters = relationship(
-    #     "Encounter",
-    #     back_populates="patient",
-    #     lazy="selectin",
-    # )
-    # 
-    # medical_reports = relationship(
-    #     "MedicalReport",
-    #     back_populates="patient",
-    #     cascade="all, delete-orphan",
-    # )
+    encounters = relationship(
+        "Encounter",
+        back_populates="patient",
+        lazy="selectin",
+    )
 
-    # chat_sessions = relationship(
-    #     "ChatSession",
-    #     back_populates="patient",
-    #     cascade="all, delete-orphan",
-    # )
+    chat_sessions = relationship(
+        "ChatSession",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
 
-    # patient_accesses = relationship(
-    #     "PatientAccess",
-    #     back_populates="patient",
-    #     cascade="all, delete-orphan",
-    # )
+    medical_reports = relationship(
+        "MedicalReport",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
+
+    medical_documents = relationship(
+        "MedicalDocument",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
+
+    patient_accesses = relationship(
+        "PatientAccess",
+        back_populates="patient",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return (
