@@ -9,7 +9,7 @@ alembic
 pydantic
 pydantic-settings
 
-pwdlib
+pwdlib[argon2]
 
 python-jose[cryptography]
 
@@ -24,3 +24,9 @@ pytest-asyncio
 httpx
 
 greenlet==3.2.4
+qdrant-client
+openai
+boto3
+pypdf
+pytesseract
+Pillow

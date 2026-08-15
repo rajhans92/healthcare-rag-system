@@ -154,6 +154,9 @@ class MedicalDocumentRepository(
         document.processing_status = status
         document.processing_error = error
 
+        if self.session is None:
+            return document
+
         await self.session.flush()
         await self.session.refresh(document)
 
