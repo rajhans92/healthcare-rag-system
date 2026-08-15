@@ -74,28 +74,29 @@ class EncounterRepository(BaseRepository[Encounter]):
         patient_id: UUID,
         page: int = 1,
         page_size: int = 20,
+        doctor_id: UUID | None = None,
     ) -> tuple[list[Encounter], int]:
         """
-        Return paginated encounters for a patient.
+        Return paginated encounters for a patient, optionally filtered by doctor.
         """
 
         offset = (page - 1) * page_size
 
+        filters = [Encounter.patient_id == patient_id]
+        if doctor_id is not None:
+            filters.append(Encounter.doctor_id == doctor_id)
+
         total = await self.session.scalar(
             select(func.count())
             .select_from(Encounter)
-            .where(
-                Encounter.patient_id == patient_id
-            )
+            .where(*filters)
         )
 
         result = await self.session.execute(
             select(Encounter)
-            .where(
-                Encounter.patient_id == patient_id
-            )
+            .where(*filters)
             .order_by(
-                Encounter.encounter_date.desc()
+                Encounter.visit_date.desc()
             )
             .offset(offset)
             .limit(page_size)

@@ -113,6 +113,15 @@ class Encounter(Base, BaseEntity):
         "MedicalDocument",
         back_populates="encounter",
     )
+
+    @property
+    def encounter_date(self) -> datetime:
+        return self.visit_date
+
+    @encounter_date.setter
+    def encounter_date(self, value: datetime) -> None:
+        self.visit_date = value
+
     def __repr__(self):
         return (
             f"<Encounter("

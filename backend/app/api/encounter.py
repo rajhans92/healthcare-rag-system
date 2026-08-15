@@ -99,6 +99,10 @@ async def update_encounter(
 )
 async def get_patient_encounters(
     patient_id: UUID,
+    doctor_id: UUID | None = Query(
+        default=None,
+        description="Optional doctor ID to filter encounters for a specific doctor.",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
@@ -115,6 +119,7 @@ async def get_patient_encounters(
         current_user=current_user,
         page=page,
         page_size=page_size,
+        doctor_id=doctor_id,
     )
 
 @router.patch(

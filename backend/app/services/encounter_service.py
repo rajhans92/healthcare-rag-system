@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,7 +55,7 @@ class EncounterService:
 
     async def create_encounter(
         self,
-        doctor_id,
+        current_user,
         request: CreateEncounterRequest,
     ) -> EncounterResponse:
         """
@@ -80,22 +81,27 @@ class EncounterService:
                 )
 
             doctor = await (
-                self.doctor_repository.get_by_id(
-                    doctor_id
+                self.doctor_repository.get_by_user_id(
+                    current_user.id
                 )
             )
 
             if doctor is None:
                 raise ValueError(
-                    "Doctor not found."
+                    "Doctor profile not found for the authenticated user."
+                )
+
+            if request.doctor_id is not None and request.doctor_id != doctor.id:
+                raise ValueError(
+                    "Doctor ID mismatch with the authenticated doctor."
                 )
 
             encounter = Encounter(
                 encounter_number=await self._generate_encounter_number(),
                 patient_id=request.patient_id,
-                doctor_id=doctor_id,
+                doctor_id=doctor.id,
                 encounter_type=request.encounter_type,
-                encounter_date=request.encounter_date,
+                visit_date=request.encounter_date,
                 chief_complaint=request.chief_complaint,
                 status=EncounterStatus.OPEN,
             )
@@ -129,6 +135,21 @@ class EncounterService:
             await self.session.rollback()
 
             raise
+
+    async def _generate_encounter_number(self) -> str:
+        """Create a unique encounter number."""
+
+        prefix = "ENC"
+        base = datetime.now(timezone.utc).strftime("%Y%m%d")
+
+        for _ in range(10):
+            number = f"{prefix}-{base}-{uuid4().hex[:8].upper()}"
+            existing = await self.encounter_repository.get_by_encounter_number(number)
+            if existing is None:
+                return number
+
+        raise RuntimeError("Unable to generate a unique encounter number.")
+
     async def get_encounter(
         self,
         encounter_id,
@@ -157,6 +178,8 @@ class EncounterService:
         patient_id,
         page: int,
         page_size: int,
+        current_user=None,
+        doctor_id=None,
     ):
         """
         List patient encounters.
@@ -167,6 +190,7 @@ class EncounterService:
                 patient_id,
                 page,
                 page_size,
+                doctor_id=doctor_id,
             )
         )
 

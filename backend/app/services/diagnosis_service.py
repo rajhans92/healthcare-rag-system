@@ -155,11 +155,11 @@ class DiagnosisService:
 
             diagnosis = Diagnosis(
                 encounter_id=encounter_id,
+                diagnosis_code=request.diagnosis_code,
                 diagnosis_name=request.diagnosis_name,
-                icd10_code=request.icd10_code,
-                diagnosis_type=request.diagnosis_type,
+                description=request.description,
+                severity=request.severity,
                 is_primary=request.is_primary,
-                notes=request.notes,
                 created_by=doctor.id,
             )
 
@@ -349,23 +349,25 @@ class DiagnosisService:
                     request.diagnosis_name
                 )
 
-            if request.icd10_code is not None:
-                diagnosis.icd10_code = (
-                    request.icd10_code
+            if request.diagnosis_code is not None:
+                diagnosis.diagnosis_code = (
+                    request.diagnosis_code
                 )
 
-            if request.diagnosis_type is not None:
-                diagnosis.diagnosis_type = (
-                    request.diagnosis_type
+            if request.description is not None:
+                diagnosis.description = (
+                    request.description
+                )
+
+            if request.severity is not None:
+                diagnosis.severity = (
+                    request.severity
                 )
 
             if request.is_primary is not None:
                 diagnosis.is_primary = (
                     request.is_primary
                 )
-
-            if request.notes is not None:
-                diagnosis.notes = request.notes
 
             diagnosis = (
                 await self.diagnosis_repository

@@ -21,6 +21,12 @@ class ChatMessageRequest(BaseModel):
         description="Clinical question to answer using retrieved patient context.",
     )
 
+    doctor_context: str | None = Field(
+        default=None,
+        max_length=1000,
+        description="Optional doctor-specific objective or context such as 'summarize patient history for follow-up care'.",
+    )
+
     include_medical_knowledge: bool = Field(
         default=False,
         description="Whether to include approved clinical knowledge in the retrieval flow.",

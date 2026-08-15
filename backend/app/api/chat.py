@@ -26,12 +26,34 @@ async def ask_question(
     service: ChatService = Depends(lambda db=Depends(get_db): ChatService(db)),
 ) -> ChatResponse:
     """
-    Ask a clinical question using the authorized patient context.
+    Ask a clinical question using authorized patient context.
 
-    This endpoint is intentionally a lightweight orchestration scaffold. The true
-    version should perform access validation, retrieval, reranking, and full LLM
-    grounding before returning a final response.
+    This endpoint is shared by both patients and doctors. Doctors may use it
+    only after they have approved access to the target patient record.
     """
+
+    return await service.ask_question(
+        current_user=current_user,
+        request=request,
+    )
+
+
+@router.post(
+    "/doctor/ask",
+    response_model=ChatResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def ask_doctor_question(
+    request: ChatMessageRequest,
+    current_user: CurrentUser,
+    service: ChatService = Depends(lambda db=Depends(get_db): ChatService(db)),
+) -> ChatResponse:
+    """
+    Doctor-specific chat route for asking about a patient after access approval.
+    """
+
+    if current_user.role.value != "DOCTOR":
+        raise PermissionError("Only doctors can use the doctor chat endpoint.")
 
     return await service.ask_question(
         current_user=current_user,

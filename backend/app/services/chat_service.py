@@ -37,7 +37,9 @@ class ChatService:
         """
         Process a clinical question against authorized patient context.
 
-        The flow is now aligned with the production architecture:
+        The flow supports both patients and doctors. Doctors can only query a
+        patient after the patient access check has been approved.
+
         1. validate patient access
         2. retrieve the minimum required patient context
         3. produce grounded answer text and citations
@@ -89,9 +91,15 @@ class ChatService:
         ]
 
         final_context = structured_facts + document_chunks
+
+        user_role = getattr(current_user, "role", None)
+        role_name = user_role.value if hasattr(user_role, "value") else str(user_role)
+
         answer = self.llm_service.generate_answer(
             question=request.question,
             context=final_context,
+            user_role=role_name,
+            doctor_context=request.doctor_context,
         )
 
         context_count = len(final_context)

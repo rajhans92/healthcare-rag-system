@@ -24,6 +24,11 @@ class CreateEncounterRequest(BaseModel):
 
     patient_id: UUID
 
+    doctor_id: UUID | None = Field(
+        default=None,
+        description="Doctor ID for the encounter. Defaults to the authenticated doctor when omitted.",
+    )
+
     encounter_type: EncounterType
 
     chief_complaint: str = Field(
@@ -70,6 +75,10 @@ class EncounterSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+
+    patient_id: UUID
+
+    doctor_id: UUID
 
     encounter_number: str
 
