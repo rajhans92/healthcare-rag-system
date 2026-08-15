@@ -104,6 +104,12 @@ class Settings(BaseSettings):
     INGESTION_WORKER_INTERVAL_SECONDS: int = 30
     INGESTION_WORKER_BATCH_SIZE: int = 20
 
+    # CORS settings for local development/debugging.
+    # Set CORS_ALLOW_ALL=true to allow all origins (temporarily for local debugging).
+    # Or set CORS_ALLOWED_ORIGINS="http://localhost:5173,https://example.com"
+    CORS_ALLOW_ALL: bool = False
+    CORS_ALLOWED_ORIGINS: str | None = None
+
 @lru_cache
 def get_settings() -> Settings:
     """

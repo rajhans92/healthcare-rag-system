@@ -96,13 +96,21 @@ app.add_middleware(TimingMiddleware)
 # CORS
 # ------------------------------------------------------------------
 
+# CORS configuration — controllable via environment for safer toggling.
+# Use CORS_ALLOW_ALL=true in .env for temporary wildcard allowance during local debugging.
+if getattr(settings, "CORS_ALLOW_ALL", False):
+    allow_origins = ["*"]
+else:
+    raw = getattr(settings, "CORS_ALLOWED_ORIGINS", None)
+    if raw:
+        allow_origins = [o.strip() for o in raw.split(",") if o.strip()]
+    else:
+        # sensible default for local development
+        allow_origins = ["http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
