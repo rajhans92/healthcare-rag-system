@@ -24,6 +24,41 @@ from app.schemas.error import (
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_validation_errors(errors: list[dict]) -> list[dict]:
+    """Convert any non-serializable values in the validation error dicts to strings.
+
+    Pydantic's error 'ctx' may include exception objects (e.g. ValueError) which are
+    not JSON serializable. This helper replaces such values with their string
+    representation to ensure the error response can be serialized safely.
+    """
+    sanitized: list[dict] = []
+    for err in errors:
+        new_err: dict = {}
+        for k, v in err.items():
+            if k == "ctx" and isinstance(v, dict):
+                new_ctx: dict = {}
+                for ck, cv in v.items():
+                    if isinstance(cv, (str, int, float, bool)) or cv is None:
+                        new_ctx[ck] = cv
+                    else:
+                        try:
+                            new_ctx[ck] = str(cv)
+                        except Exception:
+                            new_ctx[ck] = repr(cv)
+                new_err["ctx"] = new_ctx
+            else:
+                # For other fields, keep primitives, else stringify
+                if isinstance(v, (str, int, float, bool)) or v is None:
+                    new_err[k] = v
+                else:
+                    try:
+                        new_err[k] = v
+                    except Exception:
+                        new_err[k] = str(v)
+        sanitized.append(new_err)
+    return sanitized
+
+
 def register_exception_handlers(
     app: FastAPI,
 ) -> None:
@@ -54,6 +89,10 @@ def register_exception_handlers(
         request: Request,
         exc: RequestValidationError,
     ):
+        # Extract validation errors and sanitize any non-serializable ctx values
+        errors = exc.errors()
+        sanitized = _sanitize_validation_errors(errors)
+
         return JSONResponse(
             status_code=400,
             content=ErrorResponse(
@@ -61,7 +100,7 @@ def register_exception_handlers(
                 error={
                     "code": ErrorCode.VALIDATION_ERROR.value,
                     "message": "Validation failed.",
-                    "details": exc.errors(),
+                    "details": sanitized,
                 },
                 path=request.url.path,
             ).model_dump(mode="json"),

@@ -115,15 +115,27 @@ class DoctorRepository(BaseRepository[Doctor]):
         self,
         user_id: UUID,
     ) -> Doctor:
+        """Create an initial doctor row for a user.
+
+        Avoid using duplicate empty strings for unique fields. license_number is
+        non-nullable and unique, so generate a temporary unique placeholder. The
+        registration_number is nullable and should be left as NULL when not
+        provided by the user (avoid empty string which would violate the unique
+        constraint on subsequent inserts).
+        """
+        from uuid import uuid4
 
         doctor = Doctor(
             user_id=user_id,
-            license_number="",
-            registration_number="",
+            # license_number must be unique and non-nullable; use a temporary unique
+            # placeholder until the doctor updates their real license number.
+            license_number=f"temp-{uuid4().hex}",
+            # registration_number is nullable in the model — use None instead of ''
+            registration_number=None,
             specialization="",
-            qualification="",
-            department="",
-            bio="",
+            qualification=None,
+            department=None,
+            bio=None,
             experience_years=0,
             consultation_fee=0,
         )
