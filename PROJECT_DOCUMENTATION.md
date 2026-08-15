@@ -265,7 +265,3 @@ If you want, next steps I can take:
 - Generate a shorter onboarding README for new devs with exact commands and common issues.
 
 If you want any section expanded (ER diagram with full table columns, API request/response examples for each endpoint, or a separate runbook), tell me which and I'll add it.
-
-
-Thanks
-Rupesh Rajhans
