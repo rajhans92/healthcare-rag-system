@@ -33,49 +33,47 @@ logger = logging.getLogger(__name__)
 
 
 async def run_document_ingestion_worker(stop_event: asyncio.Event) -> None:
-"""
-Process queued medical documents at a fixed interval in local development.
-"""
-while not stop_event.is_set():
-    try:
-        async with AsyncSessionLocal() as session:
-            service = MedicalDocumentService(session)
-            processed = await service.process_pending_documents(
-                limit=settings.INGESTION_WORKER_BATCH_SIZE,
-            )
-            if processed:
-                logger.info(
-                    "Processed %s queued medical documents.",
-                    len(processed),
-                )
-    except Exception:  # pragma: no cover - worker safety net
-        logger.exception("Background document ingestion worker failed.")
 
-    await asyncio.sleep(settings.INGESTION_WORKER_INTERVAL_SECONDS)
+    while not stop_event.is_set():
+        try:
+            async with AsyncSessionLocal() as session:
+                service = MedicalDocumentService(session)
+                processed = await service.process_pending_documents(
+                    limit=settings.INGESTION_WORKER_BATCH_SIZE,
+                )
+                if processed:
+                    logger.info(
+                        "Processed %s queued medical documents.",
+                        len(processed),
+                    )
+        except Exception:  # pragma: no cover - worker safety net
+            logger.exception("Background document ingestion worker failed.")
+
+        await asyncio.sleep(settings.INGESTION_WORKER_INTERVAL_SECONDS)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-"""
-Application startup and shutdown events.
-"""
-await initialize_database()
-print(f"Starting {settings.APP_NAME}...")
+    """
+    Application startup and shutdown events.
+    """
+    await initialize_database()
+    print(f"Starting {settings.APP_NAME}...")
 
-stop_event = asyncio.Event()
-worker_task: asyncio.Task | None = None
-if settings.INGESTION_WORKER_ENABLED:
-    worker_task = asyncio.create_task(
-        run_document_ingestion_worker(stop_event)
-    )
+    stop_event = asyncio.Event()
+    worker_task: asyncio.Task | None = None
+    if settings.INGESTION_WORKER_ENABLED:
+        worker_task = asyncio.create_task(
+            run_document_ingestion_worker(stop_event)
+        )
 
-try:
-    yield
-finally:
-    print(f"Stopping {settings.APP_NAME}...")
-    if worker_task is not None:
-        stop_event.set()
-        await worker_task
+    try:
+        yield
+    finally:
+        print(f"Stopping {settings.APP_NAME}...")
+        if worker_task is not None:
+            stop_event.set()
+            await worker_task
 
 configure_logging()
 
@@ -102,6 +100,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
